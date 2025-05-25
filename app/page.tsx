@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import Lenis from "lenis";
+import Link from "next/link";
 import { TypingAnimation } from "@/components/magicui/typing-animation";
 import { ShimmerButton } from "@/components/magicui/shimmer-button";
 import { FlickeringGrid } from "@/components/magicui/flickering-grid";
@@ -110,11 +111,13 @@ export default function Home() {
             transition={{ delay: 1.2 }}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <ShimmerButton className="px-8 py-4 text-lg">
-              <span className="flex items-center gap-2">
-                Start Securing <ArrowRight className="w-5 h-5" />
-              </span>
-            </ShimmerButton>
+            <Link href="/chat">
+              <ShimmerButton className="px-8 py-4 text-lg">
+                <span className="flex items-center gap-2">
+                  Start Securing <ArrowRight className="w-5 h-5" />
+                </span>
+              </ShimmerButton>
+            </Link>
             <button
               onClick={scrollToVideo}
               className="px-8 py-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors text-lg flex items-center gap-2"
