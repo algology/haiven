@@ -21,8 +21,34 @@ import {
 import type { ComponentPropsWithoutRef, FC } from "react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { DLPError } from "./dlp-error";
+import { useState, useEffect } from "react";
+
+interface DLPViolation {
+  type: string;
+  message: string;
+  severity: "low" | "medium" | "high";
+}
+
+interface DLPErrorData {
+  violations: DLPViolation[];
+  message?: string;
+}
 
 export const ChatGPT: FC = () => {
+  const [dlpError, setDlpError] = useState<DLPErrorData | null>(null);
+
+  // Listen for DLP errors from the runtime
+  useEffect(() => {
+    const handleDLPError = (event: CustomEvent<DLPErrorData>) => {
+      setDlpError(event.detail);
+    };
+
+    window.addEventListener("dlp-error", handleDLPError as EventListener);
+    return () =>
+      window.removeEventListener("dlp-error", handleDLPError as EventListener);
+  }, []);
+
   return (
     <ThreadPrimitive.Root className="text-foreground dark flex h-full flex-col items-stretch bg-[#212121] px-4">
       <ThreadPrimitive.Viewport className="flex flex-grow flex-col gap-8 overflow-y-scroll pt-16">
@@ -44,6 +70,14 @@ export const ChatGPT: FC = () => {
             AssistantMessage,
           }}
         />
+
+        {/* Display DLP Error if present */}
+        {dlpError && (
+          <DLPError
+            violations={dlpError.violations}
+            onDismiss={() => setDlpError(null)}
+          />
+        )}
       </ThreadPrimitive.Viewport>
 
       <ComposerPrimitive.Root className="mx-auto flex w-full max-w-screen-md items-end rounded-3xl bg-white/5 pl-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import Lenis from "lenis";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { TypingAnimation } from "@/components/magicui/typing-animation";
 import { ShimmerButton } from "@/components/magicui/shimmer-button";
 import { FlickeringGrid } from "@/components/magicui/flickering-grid";
 import HeroVideoDialog from "@/components/magicui/hero-video-dialog";
-import { Zap, ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 
 export default function Home() {
   const { scrollYProgress } = useScroll();

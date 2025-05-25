@@ -10,17 +10,21 @@ import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button
 
 export const ThreadList: FC = () => {
   return (
-    <ThreadListPrimitive.Root className="flex flex-col items-stretch gap-1.5 bg-[#171717] p-3 rounded-lg border border-white/10">
-      <div className="flex items-center justify-center mb-2 px-1">
-        <img
-          src="/haiven.svg"
-          alt="Haiven"
-          className="h-20 w-20 brightness-0 invert"
-        />
-      </div>
-      <ThreadListNew />
-      <ThreadListItems />
-    </ThreadListPrimitive.Root>
+    <div className="h-full bg-[#171717] rounded-lg border border-white/10 flex flex-col">
+      <ThreadListPrimitive.Root className="flex flex-col items-stretch gap-1.5 p-3 h-full">
+        <div className="flex items-center justify-center mb-2 px-1">
+          <img
+            src="/haiven.svg"
+            alt="Haiven"
+            className="h-20 w-20 brightness-0 invert"
+          />
+        </div>
+        <ThreadListNew />
+        <div className="flex-1 overflow-y-auto">
+          <ThreadListItems />
+        </div>
+      </ThreadListPrimitive.Root>
+    </div>
   );
 };
 
