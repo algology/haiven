@@ -19,6 +19,23 @@ export interface ValidationResult {
   }>;
 }
 
+interface MessageContent {
+  type: string;
+  text: string;
+}
+
+interface PythonValidationResult {
+  passed: boolean;
+  original_text: string;
+  sanitized_text?: string;
+  violations: Array<{
+    type: string;
+    message: string;
+    severity: "low" | "medium" | "high";
+  }>;
+  error?: string;
+}
+
 class PythonGuardrailsService {
   private pythonPath: string;
   private scriptPath: string;
@@ -34,7 +51,7 @@ class PythonGuardrailsService {
   }
 
   async validateText(
-    text: string | any,
+    text: string | MessageContent[] | MessageContent,
     enabledValidators: ValidatorConfig[]
   ): Promise<ValidationResult> {
     // Extract text from message content (handle both string and array formats)
@@ -102,7 +119,7 @@ class PythonGuardrailsService {
     text: string,
     checkPii: boolean,
     checkSecrets: boolean
-  ): Promise<any> {
+  ): Promise<PythonValidationResult> {
     return new Promise((resolve, reject) => {
       // Build arguments for the script
       const args = [this.scriptPath, text];
@@ -132,13 +149,13 @@ class PythonGuardrailsService {
         }
 
         try {
-          const result = JSON.parse(stdout.trim());
+          const result = JSON.parse(stdout.trim()) as PythonValidationResult;
           if (result.error) {
             reject(new Error(result.error));
             return;
           }
           resolve(result);
-        } catch (parseError) {
+        } catch {
           reject(new Error(`Failed to parse Python output: ${stdout}`));
         }
       });

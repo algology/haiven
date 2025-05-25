@@ -13,6 +13,7 @@ export const ThreadList: FC = () => {
     <div className="h-full bg-[#171717] rounded-lg border border-white/10 flex flex-col">
       <ThreadListPrimitive.Root className="flex flex-col items-stretch gap-1.5 p-3 h-full">
         <div className="flex items-center justify-center mb-2 px-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/haiven.svg"
             alt="Haiven"

@@ -81,6 +81,7 @@ export default function Home() {
             className="mb-6"
           >
             <div className="flex justify-center mb-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/haiven.svg"
                 alt="Haiven"
@@ -161,6 +162,7 @@ export default function Home() {
           >
             <div className="flex items-center justify-center gap-4 mb-6">
               <span className="text-4xl md:text-5xl font-bold">See</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/haiven.svg"
                 alt="Haiven"
