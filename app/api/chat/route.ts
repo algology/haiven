@@ -1,13 +1,17 @@
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
-import {
-  pythonGuardrailsService,
-  ValidatorConfig,
-} from "@/lib/guardrails-python";
 
-// Use Node.js runtime to support child_process
+// Use Node.js runtime for better compatibility
 export const runtime = "nodejs";
 export const maxDuration = 30;
+
+// Validator configuration interface
+interface ValidatorConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  type: "privacy" | "security";
+}
 
 // Default validators configuration
 const DEFAULT_VALIDATORS: ValidatorConfig[] = [
@@ -31,6 +35,81 @@ const DEFAULT_VALIDATORS: ValidatorConfig[] = [
   },
 ];
 
+// API-based validation function
+async function validateTextViaAPI(
+  text: string,
+  enabledValidators: ValidatorConfig[]
+) {
+  const validatorNames = enabledValidators.map((v) => v.name);
+
+  console.log("Validating text with API:", text);
+  console.log("Enabled validators:", validatorNames);
+
+  try {
+    const response = await fetch(
+      `${
+        process.env.VERCEL_URL
+          ? "https://" + process.env.VERCEL_URL
+          : "http://localhost:3000"
+      }/api/python-validate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text,
+          enabled_validators: validatorNames,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Validation API error response:", errorText);
+      throw new Error(
+        `Validation API failed with status ${response.status}: ${errorText}`
+      );
+    }
+
+    const result = await response.json();
+    console.log("Validation API result:", result);
+
+    return {
+      passed: result.passed,
+      originalText: result.original_text,
+      sanitizedText: result.sanitized_text,
+      violations: result.violations || [],
+    };
+  } catch (error) {
+    console.error("Validation API call error:", error);
+    throw error;
+  }
+}
+
+// Helper function to extract text from message content
+function extractTextFromContent(content: any): string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    // Extract text from array of content objects
+    return content
+      .filter((item) => item.type === "text")
+      .map((item) => item.text)
+      .join(" ");
+  }
+
+  // If it's an object with text property
+  if (content && typeof content === "object" && content.text) {
+    return content.text;
+  }
+
+  // Fallback: convert to string
+  return String(content);
+}
+
 export async function POST(req: Request) {
   try {
     const { messages, system, tools, validators } = await req.json();
@@ -52,9 +131,9 @@ export async function POST(req: Request) {
       try {
         console.log("Validating user message before sending to OpenAI...");
 
-        // Validate the user's message
-        const validation = await pythonGuardrailsService.validateText(
-          lastMessage.content,
+        // Validate the user's message via API
+        const validation = await validateTextViaAPI(
+          extractTextFromContent(lastMessage.content),
           enabledValidators
         );
 
@@ -63,7 +142,7 @@ export async function POST(req: Request) {
         // If validation fails, return an error response
         if (!validation.passed) {
           const violationTypes = validation.violations
-            .map((v) => v.message)
+            .map((v: any) => v.message)
             .join(", ");
 
           return new Response(
@@ -82,10 +161,31 @@ export async function POST(req: Request) {
         // If validation passed but text was sanitized, use the sanitized version
         if (validation.sanitizedText) {
           console.log("Using sanitized text for OpenAI");
-          messages[messages.length - 1] = {
-            ...lastMessage,
-            content: validation.sanitizedText,
-          };
+
+          // Reconstruct the content in the same format it was received
+          if (typeof lastMessage.content === "string") {
+            messages[messages.length - 1] = {
+              ...lastMessage,
+              content: validation.sanitizedText,
+            };
+          } else if (Array.isArray(lastMessage.content)) {
+            // Update the text content in the array
+            const updatedContent = lastMessage.content.map((item: any) =>
+              item.type === "text"
+                ? { ...item, text: validation.sanitizedText }
+                : item
+            );
+            messages[messages.length - 1] = {
+              ...lastMessage,
+              content: updatedContent,
+            };
+          } else {
+            // Fallback: replace with sanitized text as string
+            messages[messages.length - 1] = {
+              ...lastMessage,
+              content: validation.sanitizedText,
+            };
+          }
         }
       } catch (error) {
         console.error("Validation error:", error);

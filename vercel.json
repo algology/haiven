@@ -1,0 +1,22 @@
+{
+  "functions": {
+    "api/python-validate/index.py": {
+      "runtime": "python3.9"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/python-validate",
+      "destination": "/api/python-validate/index.py"
+    }
+  ],
+  "builds": [
+    {
+      "src": "api/python-validate/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ]
+}
