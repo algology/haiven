@@ -37,6 +37,12 @@ export function ConfigPanel() {
   // Save validator config to localStorage
   useEffect(() => {
     localStorage.setItem("haiven-validators", JSON.stringify(validators));
+
+    // Dispatch custom event to notify other components
+    const event = new CustomEvent("validators-changed", {
+      detail: validators,
+    });
+    window.dispatchEvent(event);
   }, [validators]);
 
   // Load validator config from localStorage on mount

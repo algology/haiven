@@ -49,6 +49,23 @@ export const ChatGPT: FC = () => {
       window.removeEventListener("dlp-error", handleDLPError as EventListener);
   }, []);
 
+  // Clear DLP error when user submits a new message
+  useEffect(() => {
+    const handleMessageSubmit = () => {
+      if (dlpError) {
+        console.log("Clearing DLP error on message submit");
+        setDlpError(null);
+      }
+    };
+
+    // Listen for message submission events
+    window.addEventListener("message-submitted", handleMessageSubmit);
+
+    return () => {
+      window.removeEventListener("message-submitted", handleMessageSubmit);
+    };
+  }, [dlpError]);
+
   return (
     <ThreadPrimitive.Root className="text-foreground dark flex h-full flex-col items-stretch bg-[#212121] px-4">
       <ThreadPrimitive.Viewport className="flex flex-grow flex-col gap-8 overflow-y-scroll pt-16">
