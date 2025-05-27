@@ -29,86 +29,130 @@ export function DLPError({ violations, onDismiss }: DLPErrorProps) {
     return <Eye className="w-5 h-5 text-blue-400" />;
   };
 
-  const getViolationTitle = (type: string) => {
-    if (
-      type.toLowerCase().includes("pii") ||
-      type.toLowerCase().includes("personal")
-    ) {
-      return "Personal Information Detected";
+  const getViolationTitle = (violations: DLPViolation[]) => {
+    if (violations.length === 0) return "Content Policy Violation";
+
+    if (violations.length === 1) {
+      const type = violations[0].type;
+      if (
+        type.toLowerCase().includes("pii") ||
+        type.toLowerCase().includes("personal")
+      ) {
+        return "Personal Information Detected";
+      }
+      if (
+        type.toLowerCase().includes("secret") ||
+        type.toLowerCase().includes("key")
+      ) {
+        return "Sensitive Credentials Detected";
+      }
+      return "Sensitive Content Detected";
     }
-    if (
-      type.toLowerCase().includes("secret") ||
-      type.toLowerCase().includes("key")
-    ) {
-      return "Sensitive Credentials Detected";
-    }
-    return "Sensitive Content Detected";
+
+    // Multiple violations - use generic header
+    return "Multiple Security Policies Triggered";
   };
 
-  const getViolationDescription = (type: string) => {
-    if (
-      type.toLowerCase().includes("pii") ||
-      type.toLowerCase().includes("personal")
-    ) {
-      return "Your message contains personal information like names, emails, or addresses that could be sensitive.";
+  const getViolationDescription = (violations: DLPViolation[]) => {
+    if (violations.length === 0)
+      return "Your message contains content that violates our security policies.";
+
+    if (violations.length === 1) {
+      const type = violations[0].type;
+      if (
+        type.toLowerCase().includes("pii") ||
+        type.toLowerCase().includes("personal")
+      ) {
+        return "Your message contains personal information like names, emails, or addresses that could be sensitive.";
+      }
+      if (
+        type.toLowerCase().includes("secret") ||
+        type.toLowerCase().includes("key")
+      ) {
+        return "Your message contains API keys, passwords, or other credentials that should be kept private.";
+      }
+      return "Your message contains content that may be sensitive or confidential.";
     }
-    if (
-      type.toLowerCase().includes("secret") ||
-      type.toLowerCase().includes("key")
-    ) {
-      return "Your message contains API keys, passwords, or other credentials that should be kept private.";
-    }
-    return "Your message contains content that may be sensitive or confidential.";
+
+    // Multiple violations - describe what was found
+    const violationTypes = violations.map((v) => {
+      if (
+        v.type.toLowerCase().includes("pii") ||
+        v.type.toLowerCase().includes("personal")
+      ) {
+        return "personal information";
+      }
+      if (
+        v.type.toLowerCase().includes("secret") ||
+        v.type.toLowerCase().includes("key")
+      ) {
+        return "API keys/secrets";
+      }
+      return "sensitive content";
+    });
+
+    const uniqueTypes = [...new Set(violationTypes)];
+    return `Your message contains ${uniqueTypes.join(
+      " and "
+    )} that could be sensitive.`;
   };
 
-  const getSuggestions = (type: string) => {
-    if (
-      type.toLowerCase().includes("pii") ||
-      type.toLowerCase().includes("personal")
-    ) {
-      return [
-        "Remove or replace names with generic terms like 'my colleague' or 'the user'",
-        "Replace email addresses with examples like 'user@example.com'",
-        "Use placeholders for addresses like '123 Main Street'",
-        "Avoid sharing phone numbers or ID numbers",
-      ];
-    }
-    if (
-      type.toLowerCase().includes("secret") ||
-      type.toLowerCase().includes("key")
-    ) {
-      return [
-        "Remove API keys and use placeholders like 'YOUR_API_KEY'",
-        "Replace passwords with 'YOUR_PASSWORD'",
-        "Use example tokens like 'sk-example123...'",
-        "Avoid sharing database connection strings",
-      ];
-    }
-    return [
-      "Review your message for sensitive information",
-      "Use generic examples instead of real data",
-      "Consider if this information needs to be shared",
-    ];
+  const getSuggestions = (violations: DLPViolation[]) => {
+    const allSuggestions: string[] = [];
+
+    violations.forEach((violation) => {
+      const type = violation.type;
+      if (
+        type.toLowerCase().includes("pii") ||
+        type.toLowerCase().includes("personal")
+      ) {
+        allSuggestions.push(
+          "Remove or replace names with generic terms like 'my colleague' or 'the user'",
+          "Replace email addresses with examples like 'user@example.com'",
+          "Use placeholders for addresses like '123 Main Street'",
+          "Avoid sharing phone numbers or ID numbers"
+        );
+      }
+      if (
+        type.toLowerCase().includes("secret") ||
+        type.toLowerCase().includes("key")
+      ) {
+        allSuggestions.push(
+          "Remove API keys and use placeholders like 'YOUR_API_KEY'",
+          "Replace passwords with 'YOUR_PASSWORD'",
+          "Use example tokens like 'sk-example123...'",
+          "Avoid sharing database connection strings"
+        );
+      }
+    });
+
+    // Remove duplicates and return
+    return [...new Set(allSuggestions)];
   };
 
-  // Get the primary violation for display
+  // Get dynamic content based on all violations
+  const violationTitle = getViolationTitle(violations);
+  const violationDescription = getViolationDescription(violations);
+  const suggestions = getSuggestions(violations);
+
+  // Get icon for the primary violation type
   const primaryViolation = violations[0];
-  const violationIcon = getViolationIcon(primaryViolation.type);
-  const violationTitle = getViolationTitle(primaryViolation.type);
-  const violationDescription = getViolationDescription(primaryViolation.type);
-  const suggestions = getSuggestions(primaryViolation.type);
+  const violationIcon = primaryViolation ? (
+    getViolationIcon(primaryViolation.type)
+  ) : (
+    <AlertTriangle className="w-5 h-5 text-red-400" />
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-screen-md gap-3 mb-4">
       <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-[24px] border border-red-500/20 bg-red-500/10">
-        <AlertTriangle className="w-4 h-4 text-red-400" />
+        {violationIcon}
       </div>
 
       <div className="pt-1 flex-1">
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
           {/* Header */}
           <div className="flex items-center gap-2 mb-3">
-            {violationIcon}
             <h3 className="text-red-200 font-medium">{violationTitle}</h3>
           </div>
 
