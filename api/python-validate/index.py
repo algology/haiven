@@ -17,11 +17,22 @@ except ImportError as e:
     GUARDRAILS_AVAILABLE = False
 
 class handler(BaseHTTPRequestHandler):
+    def _set_cors_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+    
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self._set_cors_headers()
+        self.end_headers()
+    
     def do_POST(self):
         content_length = int(self.headers.get("Content-Length", 0))
         if content_length == 0:
             self.send_response(400)
             self.send_header("Content-type", "application/json")
+            self._set_cors_headers()
             self.end_headers()
             self.wfile.write(json.dumps({"error": "No data received"}).encode("utf-8"))
             return
@@ -36,6 +47,7 @@ class handler(BaseHTTPRequestHandler):
             if not text:
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
+                self._set_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "No text provided"}).encode("utf-8"))
                 return
@@ -60,6 +72,7 @@ class handler(BaseHTTPRequestHandler):
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
+            self._set_cors_headers()
             self.end_headers()
             self.wfile.write(json.dumps(result).encode("utf-8"))
 
@@ -70,6 +83,7 @@ class handler(BaseHTTPRequestHandler):
             
             self.send_response(500)
             self.send_header("Content-type", "application/json")
+            self._set_cors_headers()
             self.end_headers()
             error_response = {
                 "error": "Validation failed",
