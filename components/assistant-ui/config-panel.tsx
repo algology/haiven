@@ -134,13 +134,13 @@ export function ConfigPanel() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "data-protection":
-        return <Shield className="w-4 h-4" />;
+        return <Shield className="w-4 h-4 text-white" />;
       case "content-safety":
-        return <MessageSquare className="w-4 h-4" />;
+        return <MessageSquare className="w-4 h-4 text-white" />;
       case "business-compliance":
-        return <Building className="w-4 h-4" />;
+        return <Building className="w-4 h-4 text-white" />;
       default:
-        return <Eye className="w-4 h-4" />;
+        return <Eye className="w-4 h-4 text-white" />;
     }
   };
 
@@ -255,7 +255,7 @@ export function ConfigPanel() {
                   }`}
                 >
                   <svg
-                    className="w-4 h-4 text-gray-400"
+                    className="w-4 h-4 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -335,7 +335,7 @@ export function ConfigPanel() {
       {/* Footer */}
       <div className="p-4 border-t border-gray-700 bg-gray-900/50">
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          <AlertTriangle className="w-3 h-3" />
+          <AlertTriangle className="w-3 h-3 text-white" />
           <span>Policies are enforced in real-time during conversations</span>
         </div>
       </div>
