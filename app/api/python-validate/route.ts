@@ -54,10 +54,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
+interface ValidationResult {
+  passed: boolean;
+  original_text: string;
+  sanitized_text: string | null;
+  violations: Array<{
+    type: string;
+    message: string;
+    severity: string;
+  }>;
+}
+
 async function validateWithPythonSubprocess(
   text: string,
   enabledValidators: string[]
-): Promise<any> {
+): Promise<ValidationResult> {
   return new Promise((resolve, reject) => {
     const pythonScript = `
 import sys

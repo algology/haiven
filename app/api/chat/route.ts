@@ -86,7 +86,7 @@ async function validateTextViaAPI(
 }
 
 // Helper function to extract text from message content
-function extractTextFromContent(content: any): string {
+function extractTextFromContent(content: unknown): string {
   if (typeof content === "string") {
     return content;
   }
@@ -94,14 +94,22 @@ function extractTextFromContent(content: any): string {
   if (Array.isArray(content)) {
     // Extract text from array of content objects
     return content
-      .filter((item) => item.type === "text")
-      .map((item) => item.text)
+      .filter(
+        (item) =>
+          item &&
+          typeof item === "object" &&
+          "type" in item &&
+          item.type === "text"
+      )
+      .map((item) =>
+        item && typeof item === "object" && "text" in item ? item.text : ""
+      )
       .join(" ");
   }
 
   // If it's an object with text property
-  if (content && typeof content === "object" && content.text) {
-    return content.text;
+  if (content && typeof content === "object" && "text" in content) {
+    return String(content.text);
   }
 
   // Fallback: convert to string
@@ -140,7 +148,7 @@ export async function POST(req: Request) {
         // If validation fails, return an error response
         if (!validation.passed) {
           const violationTypes = validation.violations
-            .map((v: any) => v.message)
+            .map((v: { message: string }) => v.message)
             .join(", ");
 
           return new Response(
@@ -168,7 +176,10 @@ export async function POST(req: Request) {
             };
           } else if (Array.isArray(lastMessage.content)) {
             // Update the text content in the array
-            const updatedContent = lastMessage.content.map((item: any) =>
+            const updatedContent = lastMessage.content.map((item: unknown) =>
+              item &&
+              typeof item === "object" &&
+              "type" in item &&
               item.type === "text"
                 ? { ...item, text: validation.sanitizedText }
                 : item
