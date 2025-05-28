@@ -101,7 +101,7 @@ export default function Home() {
               className="text-2xl md:text-3xl text-gray-300 font-light"
               duration={50}
             >
-              Protect your against data-leakage to LLM providers.
+              Protect yourself against data-leakage to LLM providers.
             </TypingAnimation>
           </motion.div>
 
