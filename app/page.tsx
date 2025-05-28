@@ -174,7 +174,7 @@ export default function Home() {
             </div>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
               Watch how our platform protects your data from LLM providers in
-              real-time.
+              real-time
             </p>
           </motion.div>
 
