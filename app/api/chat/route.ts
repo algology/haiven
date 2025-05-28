@@ -65,15 +65,6 @@ async function validateTextViaAPI(
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Validation API error response:", errorText);
-
-      // If we're in development and the Python API is not available, use fallback
-      if (!process.env.VERCEL_URL && response.status === 404) {
-        console.log(
-          "Python API not available in development, using fallback validation"
-        );
-        return validateTextFallback(text, enabledValidators);
-      }
-
       throw new Error(
         `Validation API failed with status ${response.status}: ${errorText}`
       );
@@ -90,75 +81,8 @@ async function validateTextViaAPI(
     };
   } catch (error) {
     console.error("Validation API call error:", error);
-
-    // If we're in development and can't reach the Python API, use fallback
-    if (!process.env.VERCEL_URL) {
-      console.log("Using fallback validation for development");
-      return validateTextFallback(text, enabledValidators);
-    }
-
     throw error;
   }
-}
-
-// Fallback validation for development
-function validateTextFallback(
-  text: string,
-  enabledValidators: ValidatorConfig[]
-) {
-  const violations: any[] = [];
-
-  // Simple regex-based PII detection for development
-  if (
-    enabledValidators.some(
-      (v) => v.name === "PII Detection" || v.name === "Sensitive Data"
-    )
-  ) {
-    const piiPatterns = [
-      /\b[A-Za-z]+ [A-Za-z]+\b/, // Names like "John Smith"
-      /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/, // Email addresses
-      /\b\d{3}-\d{2}-\d{4}\b/, // SSN format
-      /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/, // Credit card format
-    ];
-
-    for (const pattern of piiPatterns) {
-      if (pattern.test(text)) {
-        violations.push({
-          type: "PII Detection",
-          message: "Personal identifiable information detected",
-          severity: "high",
-        });
-        break;
-      }
-    }
-  }
-
-  // Simple API key detection for development
-  if (enabledValidators.some((v) => v.name === "Code Secrets")) {
-    const secretPatterns = [
-      /sk-[a-zA-Z0-9]{32,}/, // OpenAI API keys
-      /AIza[0-9A-Za-z\\-_]{35}/, // Google API keys
-      /AKIA[0-9A-Z]{16}/, // AWS Access Key
-    ];
-
-    for (const pattern of secretPatterns) {
-      if (pattern.test(text)) {
-        violations.push({
-          type: "Code Secrets",
-          message: "API keys or secrets detected",
-          severity: "high",
-        });
-        break;
-      }
-    }
-  }
-
-  return {
-    passed: violations.length === 0,
-    originalText: text,
-    sanitizedText: null,
-    violations: violations,
-  };
 }
 
 // Helper function to extract text from message content

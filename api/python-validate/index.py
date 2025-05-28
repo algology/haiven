@@ -8,10 +8,10 @@ os.environ.setdefault('GUARDRAILS_ENABLE_REMOTE_INFERENCING', 'true')
 
 # Import Guardrails
 try:
-    from guardrails import Guard, OnFailAction
-    from guardrails.hub import DetectPII, DetectSecrets
+    from guardrails.validators import PIIFilter
+    import re
     GUARDRAILS_AVAILABLE = True
-    print("[Guardrails] Successfully imported Guardrails AI")
+    print("[Guardrails] Successfully imported Guardrails AI 0.4.2")
 except ImportError as e:
     print(f"[Guardrails] Import error: {e}")
     GUARDRAILS_AVAILABLE = False
@@ -85,61 +85,101 @@ class handler(BaseHTTPRequestHandler):
 
 def validate_with_guardrails(text, enabled_validators):
     """
-    Use actual Guardrails AI to validate the text
+    Use actual Guardrails AI 0.4.2 to validate the text
     """
     violations = []
-    sanitized_text = text
     should_block = False
 
     try:
         print(f"[Guardrails] Starting validation with validators: {enabled_validators}")
         
-        # PII Detection using Guardrails Hub
-        if "PII Detection" in enabled_validators or "Sensitive Data" in enabled_validators:
+        # PII Detection - only run if specifically enabled
+        if "PII Detection" in enabled_validators:
             try:
-                print("[Guardrails] Creating PII detection guard...")
-                # Create a guard with PII detection
-                pii_guard = Guard().use(
-                    DetectPII,
-                    pii_entities=["PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER", "SSN", "CREDIT_CARD"],
-                    on_fail=OnFailAction.EXCEPTION
-                )
+                print("[Guardrails] Creating PII filter...")
+                pii_filter = PIIFilter(pii_entities=["PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER"])
                 
                 print("[Guardrails] Running PII validation...")
-                # Validate the text
-                pii_result = pii_guard.validate(text)
+                result = pii_filter.validate(text, {})
+                print(f"[Guardrails] PII validation result: {result}")
                 
-                # If we get here, validation passed
-                print(f"[Guardrails] PII validation passed")
+                # Check if validation passed
+                if hasattr(result, 'outcome') and result.outcome == 'pass':
+                    print(f"[Guardrails] PII validation result: passed=True")
+                else:
+                    print(f"[Guardrails] PII validation result: passed=False")
+                    violations.append({
+                        "type": "PII Detection",
+                        "message": "Personal identifiable information detected",
+                        "severity": "high"
+                    })
+                    should_block = True
                 
-            except Exception as pii_error:
-                print(f"[Guardrails] PII validation failed: {pii_error}")
+            except Exception as e:
+                print(f"[Guardrails] PII validation error: {e}")
                 violations.append({
                     "type": "PII Detection",
                     "message": "Personal identifiable information detected",
                     "severity": "high"
                 })
                 should_block = True
-
-        # Code Secrets Detection using Guardrails Hub
-        if "Code Secrets" in enabled_validators:
+        
+        # Financial & Medical Data Detection - separate from PII, focuses on financial/medical data
+        if "Financial & Medical Data" in enabled_validators:
             try:
-                print("[Guardrails] Creating secrets detection guard...")
-                # Create a guard with secrets detection
-                secrets_guard = Guard().use(
-                    DetectSecrets,
-                    on_fail=OnFailAction.EXCEPTION
-                )
+                print("[Guardrails] Creating sensitive data filter...")
+                sensitive_filter = PIIFilter(pii_entities=["SSN", "CREDIT_CARD", "MEDICAL_LICENSE"])
+                
+                print("[Guardrails] Running sensitive data validation...")
+                result = sensitive_filter.validate(text, {})
+                print(f"[Guardrails] Sensitive data validation result: {result}")
+                
+                # Check if validation passed
+                if hasattr(result, 'outcome') and result.outcome == 'pass':
+                    print(f"[Guardrails] Sensitive data validation result: passed=True")
+                else:
+                    print(f"[Guardrails] Sensitive data validation result: passed=False")
+                    violations.append({
+                        "type": "Sensitive Data",
+                        "message": "Sensitive financial or medical information detected",
+                        "severity": "high"
+                    })
+                    should_block = True
+                
+            except Exception as e:
+                print(f"[Guardrails] Sensitive data validation error: {e}")
+                violations.append({
+                    "type": "Sensitive Data", 
+                    "message": "Sensitive financial or medical information detected",
+                    "severity": "high"
+                })
+                should_block = True
+
+        # API Keys & Secrets Detection using Guardrails DetectSecrets validator
+        if "API Keys & Secrets" in enabled_validators:
+            try:
+                print("[Guardrails] Creating secrets detection filter...")
+                from guardrails.validators import DetectSecrets
+                secrets_filter = DetectSecrets()
                 
                 print("[Guardrails] Running secrets validation...")
-                # Validate the text
-                secrets_result = secrets_guard.validate(text)
+                result = secrets_filter.validate(text, {})
+                print(f"[Guardrails] Secrets validation result: {result}")
                 
-                # If we get here, validation passed
-                print(f"[Guardrails] Secrets validation passed")
+                # Check if validation passed
+                if hasattr(result, 'outcome') and result.outcome == 'pass':
+                    print(f"[Guardrails] Secrets validation result: passed=True")
+                else:
+                    print(f"[Guardrails] Secrets validation result: passed=False")
+                    violations.append({
+                        "type": "Code Secrets",
+                        "message": "API keys or secrets detected",
+                        "severity": "high"
+                    })
+                    should_block = True
                 
-            except Exception as secrets_error:
-                print(f"[Guardrails] Secrets validation failed: {secrets_error}")
+            except Exception as e:
+                print(f"[Guardrails] Code secrets validation error: {e}")
                 violations.append({
                     "type": "Code Secrets",
                     "message": "API keys or secrets detected",
@@ -147,10 +187,108 @@ def validate_with_guardrails(text, enabled_validators):
                 })
                 should_block = True
 
+        # Toxic Language Detection
+        if "Toxic Language" in enabled_validators:
+            try:
+                print("[Guardrails] Creating toxic language filter...")
+                from guardrails.validators import ToxicLanguage
+                toxic_filter = ToxicLanguage()
+                
+                print("[Guardrails] Running toxic language validation...")
+                result = toxic_filter.validate(text, {})
+                print(f"[Guardrails] Toxic language validation result: {result}")
+                
+                # Check if validation passed
+                if hasattr(result, 'outcome') and result.outcome == 'pass':
+                    print(f"[Guardrails] Toxic language validation result: passed=True")
+                else:
+                    print(f"[Guardrails] Toxic language validation result: passed=False")
+                    violations.append({
+                        "type": "Toxic Language",
+                        "message": "Harmful or abusive language detected",
+                        "severity": "high"
+                    })
+                    should_block = True
+                
+            except Exception as e:
+                print(f"[Guardrails] Toxic language validation error: {e}")
+                violations.append({
+                    "type": "Toxic Language",
+                    "message": "Harmful or abusive language detected",
+                    "severity": "high"
+                })
+                should_block = True
+
+        # Profanity Filter
+        if "Profanity Filter" in enabled_validators:
+            try:
+                print("[Guardrails] Creating profanity filter...")
+                from guardrails.validators import IsProfanityFree
+                profanity_filter = IsProfanityFree()
+                
+                print("[Guardrails] Running profanity validation...")
+                result = profanity_filter.validate(text, {})
+                print(f"[Guardrails] Profanity validation result: {result}")
+                
+                # Check if validation passed
+                if hasattr(result, 'outcome') and result.outcome == 'pass':
+                    print(f"[Guardrails] Profanity validation result: passed=True")
+                else:
+                    print(f"[Guardrails] Profanity validation result: passed=False")
+                    violations.append({
+                        "type": "Profanity Filter",
+                        "message": "Profane or offensive language detected",
+                        "severity": "medium"
+                    })
+                    should_block = True
+                
+            except Exception as e:
+                print(f"[Guardrails] Profanity validation error: {e}")
+                violations.append({
+                    "type": "Profanity Filter",
+                    "message": "Profane or offensive language detected",
+                    "severity": "medium"
+                })
+                should_block = True
+
+        # Competitor Mentions Detection
+        if "Competitor Mentions" in enabled_validators:
+            try:
+                print("[Guardrails] Creating competitor check filter...")
+                from guardrails.validators import CompetitorCheck
+                # Note: CompetitorCheck typically requires configuration with competitor names
+                # For demo purposes, we'll use a basic configuration
+                competitor_filter = CompetitorCheck(competitors=["OpenAI", "Anthropic", "Google", "Microsoft", "Amazon"])
+                
+                print("[Guardrails] Running competitor check validation...")
+                result = competitor_filter.validate(text, {})
+                print(f"[Guardrails] Competitor check validation result: {result}")
+                
+                # Check if validation passed
+                if hasattr(result, 'outcome') and result.outcome == 'pass':
+                    print(f"[Guardrails] Competitor check validation result: passed=True")
+                else:
+                    print(f"[Guardrails] Competitor check validation result: passed=False")
+                    violations.append({
+                        "type": "Competitor Mentions",
+                        "message": "Competitor company or product mentioned",
+                        "severity": "medium"
+                    })
+                    should_block = True
+                
+            except Exception as e:
+                print(f"[Guardrails] Competitor check validation error: {e}")
+                violations.append({
+                    "type": "Competitor Mentions",
+                    "message": "Competitor company or product mentioned",
+                    "severity": "medium"
+                })
+                should_block = True
+
         return {
             "passed": not should_block,
             "original_text": text,
-            "sanitized_text": sanitized_text if sanitized_text != text else None,
+            "sanitized_text": None,
             "violations": violations
         }
 

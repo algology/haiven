@@ -12,6 +12,8 @@ interface ValidatorConfig {
   name: string;
   enabled: boolean;
   type: string;
+  description: string;
+  category: "data-protection" | "content-safety" | "business-compliance";
 }
 
 interface DLPViolation {
@@ -26,23 +28,61 @@ interface DLPErrorResponse {
 }
 
 const DEFAULT_VALIDATORS: ValidatorConfig[] = [
+  // Data Protection
   {
     id: "pii-detection",
     name: "PII Detection",
     enabled: true,
     type: "privacy",
+    description:
+      "Detects personal identifiable information like names, emails, and phone numbers",
+    category: "data-protection",
   },
   {
     id: "sensitive-data",
-    name: "Sensitive Data",
+    name: "Financial & Medical Data",
     enabled: true,
     type: "privacy",
+    description:
+      "Identifies sensitive financial and medical information (SSN, credit cards)",
+    category: "data-protection",
   },
   {
     id: "code-secrets",
-    name: "Code Secrets",
-    enabled: false,
+    name: "API Keys & Secrets",
+    enabled: true,
     type: "security",
+    description:
+      "Prevents exposure of API keys, passwords, and authentication tokens",
+    category: "data-protection",
+  },
+
+  // Content Safety
+  {
+    id: "toxic-language",
+    name: "Toxic Language",
+    enabled: false,
+    type: "content",
+    description: "Filters harmful, abusive, or inappropriate language",
+    category: "content-safety",
+  },
+  {
+    id: "profanity-filter",
+    name: "Profanity Filter",
+    enabled: false,
+    type: "content",
+    description: "Blocks profane and offensive language",
+    category: "content-safety",
+  },
+
+  // Business Compliance
+  {
+    id: "competitor-check",
+    name: "Competitor Mentions",
+    enabled: false,
+    type: "business",
+    description: "Detects mentions of competitor companies or products",
+    category: "business-compliance",
   },
 ];
 
