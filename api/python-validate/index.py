@@ -2,6 +2,7 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import os
+import re
 
 # Set up Guardrails environment
 os.environ.setdefault('GUARDRAILS_ENABLE_METRICS', 'true')
@@ -11,7 +12,6 @@ os.environ.setdefault('GUARDRAILS_ENABLE_REMOTE_INFERENCING', 'true')
 try:
     from guardrails.hub import DetectPII  # type: ignore
     import guardrails as gd  # type: ignore
-    import re
     GUARDRAILS_AVAILABLE = True
     print("[Guardrails] Successfully imported Guardrails AI 0.4.2")
 except ImportError as e:
@@ -74,13 +74,8 @@ class handler(BaseHTTPRequestHandler):
 
             if not GUARDRAILS_AVAILABLE:
                 # Fallback response if Guardrails is not available
-                result = {
-                    "passed": True,
-                    "original_text": text,
-                    "sanitized_text": None,
-                    "violations": [],
-                    "error": "Guardrails not available - using fallback"
-                }
+                print("[Guardrails Python] Using fallback validation patterns...")
+                result = validate_with_fallback_patterns(text, enabled_validators)
             else:
                 result = validate_with_guardrails(text, enabled_validators)
 
@@ -112,6 +107,80 @@ class handler(BaseHTTPRequestHandler):
                 }]
             }
             self.wfile.write(json.dumps(error_response).encode("utf-8"))
+
+def validate_with_fallback_patterns(text, enabled_validators):
+    """
+    Fallback validation using regex patterns when Guardrails AI is not available
+    """
+    violations = []
+    should_block = False
+    
+    print(f"[Fallback] Validating text with fallback patterns: {enabled_validators}")
+    
+    # PII Detection fallback patterns
+    if "PII Detection" in enabled_validators:
+        pii_patterns = [
+            (r'\b[A-Z][a-z]+ [A-Z][a-z]+\b', "Personal name detected"),  # Simple name pattern
+            (r'\b\d{1,5}\s+[A-Za-z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|terrace|way|place|pl)\b', "Street address detected"),  # Address pattern
+            (r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', "Email address detected"),  # Email pattern
+            (r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', "Phone number detected"),  # Phone pattern
+        ]
+        
+        for pattern, message in pii_patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                print(f"[Fallback] PII pattern matched: {message}")
+                violations.append({
+                    "type": "PII Detection",
+                    "message": "Personal identifiable information detected",
+                    "severity": "high"
+                })
+                should_block = True
+                break  # Stop at first match
+    
+    # Financial & Medical Data fallback patterns
+    if "Financial & Medical Data" in enabled_validators:
+        financial_patterns = [
+            (r'\b\d{3}-\d{2}-\d{4}\b', "SSN pattern detected"),  # SSN pattern
+            (r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b', "Credit card pattern detected"),  # Credit card pattern
+        ]
+        
+        for pattern, message in financial_patterns:
+            if re.search(pattern, text):
+                print(f"[Fallback] Financial pattern matched: {message}")
+                violations.append({
+                    "type": "Sensitive Data",
+                    "message": "Sensitive financial or medical information detected",
+                    "severity": "high"
+                })
+                should_block = True
+                break
+    
+    # API Keys & Secrets fallback patterns
+    if "API Keys & Secrets" in enabled_validators:
+        secret_patterns = [
+            (r'(?:api[_-]?key|secret[_-]?key|access[_-]?token)[\s:=]+[A-Za-z0-9+/]{20,}', "API key pattern detected"),  # API key pattern
+            (r'[A-Za-z0-9+/]{40,}={0,2}', "Base64 encoded secret pattern detected"),  # Base64 pattern
+        ]
+        
+        for pattern, message in secret_patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                print(f"[Fallback] Secret pattern matched: {message}")
+                violations.append({
+                    "type": "Code Secrets",
+                    "message": "API keys or secrets detected",
+                    "severity": "high"
+                })
+                should_block = True
+                break
+    
+    print(f"[Fallback] Validation complete. Should block: {should_block}, Violations: {len(violations)}")
+    
+    return {
+        "passed": not should_block,
+        "original_text": text,
+        "sanitized_text": None,
+        "violations": violations
+    }
 
 def validate_with_guardrails(text, enabled_validators):
     """
