@@ -1,3 +1,4 @@
+# Version: 2.0 - Python Serverless Function (Node.js route removed)
 from http.server import BaseHTTPRequestHandler
 import json
 import os
