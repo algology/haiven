@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 // This route is only for development - in production, Vercel routes to the Python serverless function
 export async function POST(request: NextRequest) {
-  // Only allow this in development
+  // In production, this route should not be used because Vercel will route directly to the Python function
+  // But we'll keep it available as a fallback
   if (process.env.NODE_ENV === "production") {
-    return NextResponse.json(
-      { error: "This endpoint is only available in development" },
-      { status: 404 }
+    console.log(
+      "Warning: Using Node.js validation route in production. This should use the Python serverless function."
     );
   }
 

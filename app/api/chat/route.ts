@@ -46,24 +46,23 @@ async function validateTextViaAPI(
   console.log("Enabled validators:", validatorNames);
 
   try {
-    // For now, skip validation in production to avoid deployment protection issues
-    // TODO: Re-enable once deployment protection is configured properly
+    // Determine the correct API URL based on environment
+    let apiUrl: string;
+
     if (process.env.NODE_ENV === "production") {
-      console.log(
-        "Skipping validation in production due to deployment protection"
-      );
-      return {
-        passed: true,
-        originalText: text,
-        sanitizedText: null,
-        violations: [],
-      };
+      // In production on Vercel, use the deployed domain
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "https://haiven.vercel.app";
+      apiUrl = `${baseUrl}/api/python-validate`;
+    } else {
+      // In development, use localhost
+      apiUrl = "http://localhost:3000/api/python-validate";
     }
 
-    // In development, use localhost
-    const baseUrl = "http://localhost:3000";
+    console.log("Making validation request to:", apiUrl);
 
-    const response = await fetch(`${baseUrl}/api/python-validate`, {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -93,7 +92,43 @@ async function validateTextViaAPI(
     };
   } catch (error) {
     console.error("Validation API call error:", error);
-    // In case of error, allow the message to proceed
+
+    // In production, if validation fails, we should be more cautious
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "Production validation failed - implementing fallback safety check"
+      );
+
+      // Basic fallback validation for obvious sensitive data
+      const sensitivePatterns = [
+        /\b\d{3}-\d{2}-\d{4}\b/, // SSN pattern
+        /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/, // Credit card pattern
+        /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/, // Email pattern
+        /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/, // Phone pattern
+      ];
+
+      const hasObviousSensitiveData = sensitivePatterns.some((pattern) =>
+        pattern.test(text)
+      );
+
+      if (hasObviousSensitiveData) {
+        return {
+          passed: false,
+          originalText: text,
+          sanitizedText: null,
+          violations: [
+            {
+              type: "Fallback Detection",
+              message:
+                "Potentially sensitive information detected (validation service unavailable)",
+              severity: "high",
+            },
+          ],
+        };
+      }
+    }
+
+    // In case of error, allow the message to proceed (but log the issue)
     return {
       passed: true,
       originalText: text,

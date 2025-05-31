@@ -8,7 +8,7 @@ os.environ.setdefault('GUARDRAILS_ENABLE_REMOTE_INFERENCING', 'true')
 
 # Import Guardrails
 try:
-    from guardrails.validators import PIIFilter
+    from guardrails.validators import PIIFilter  # type: ignore
     import re
     GUARDRAILS_AVAILABLE = True
     print("[Guardrails] Successfully imported Guardrails AI 0.4.2")
@@ -20,12 +20,26 @@ class handler(BaseHTTPRequestHandler):
     def _set_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Cache-Control", "no-cache")
     
     def do_OPTIONS(self):
         self.send_response(200)
         self._set_cors_headers()
         self.end_headers()
+    
+    def do_GET(self):
+        # Add a health check endpoint
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self._set_cors_headers()
+        self.end_headers()
+        health_response = {
+            "status": "healthy",
+            "service": "Guardrails DLP Validation",
+            "guardrails_available": GUARDRAILS_AVAILABLE
+        }
+        self.wfile.write(json.dumps(health_response).encode("utf-8"))
     
     def do_POST(self):
         content_length = int(self.headers.get("Content-Length", 0))
@@ -173,7 +187,7 @@ def validate_with_guardrails(text, enabled_validators):
         if "API Keys & Secrets" in enabled_validators:
             try:
                 print("[Guardrails] Creating secrets detection filter...")
-                from guardrails.validators import DetectSecrets
+                from guardrails.validators import DetectSecrets  # type: ignore
                 secrets_filter = DetectSecrets()
                 
                 print("[Guardrails] Running secrets validation...")
@@ -205,7 +219,7 @@ def validate_with_guardrails(text, enabled_validators):
         if "Toxic Language" in enabled_validators:
             try:
                 print("[Guardrails] Creating toxic language filter...")
-                from guardrails.validators import ToxicLanguage
+                from guardrails.validators import ToxicLanguage  # type: ignore
                 toxic_filter = ToxicLanguage()
                 
                 print("[Guardrails] Running toxic language validation...")
@@ -237,7 +251,7 @@ def validate_with_guardrails(text, enabled_validators):
         if "Profanity Filter" in enabled_validators:
             try:
                 print("[Guardrails] Creating profanity filter...")
-                from guardrails.validators import IsProfanityFree
+                from guardrails.validators import IsProfanityFree  # type: ignore
                 profanity_filter = IsProfanityFree()
                 
                 print("[Guardrails] Running profanity validation...")
@@ -269,7 +283,7 @@ def validate_with_guardrails(text, enabled_validators):
         if "Competitor Mentions" in enabled_validators:
             try:
                 print("[Guardrails] Creating competitor check filter...")
-                from guardrails.validators import CompetitorCheck
+                from guardrails.validators import CompetitorCheck  # type: ignore
                 # Note: CompetitorCheck typically requires configuration with competitor names
                 # For demo purposes, we'll use a basic configuration
                 competitor_filter = CompetitorCheck(competitors=["OpenAI", "Anthropic", "Google", "Microsoft", "Amazon"])

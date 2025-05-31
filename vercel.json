@@ -3,5 +3,30 @@
     "api/python-validate/index.py": {
       "runtime": "@vercel/python"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/python-validate",
+      "destination": "/api/python-validate/index.py"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ]
 }

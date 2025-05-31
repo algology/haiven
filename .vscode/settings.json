@@ -1,0 +1,10 @@
+{
+  "python.pythonPath": "/usr/bin/python3",
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "python.analysis.extraPaths": [
+    "/Users/alanagon/Library/Python/3.9/lib/python/site-packages"
+  ],
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.stubPath": "/Users/alanagon/Library/Python/3.9/lib/python/site-packages",
+  "pylance.insidersChannel": "off"
+}
