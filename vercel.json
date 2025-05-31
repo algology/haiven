@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/python-validate/index.py": {
-      "runtime": "@vercel/python@3.9"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/python-validate",
