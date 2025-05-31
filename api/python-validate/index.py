@@ -127,7 +127,11 @@ def validate_with_fallback_patterns(text, enabled_validators):
         ]
         
         # Skip common greeting words that aren't names
-        common_greetings = ["hello world", "good morning", "good afternoon", "good evening", "thank you"]
+        common_greetings = [
+            "hello world", "good morning", "good afternoon", "good evening", "thank you",
+            "what is the weather", "how are you", "nice to meet", "see you later",
+            "have a good", "take care", "best regards", "kind regards"
+        ]
         text_lower = text.lower()
         
         # Don't flag common greetings as names
