@@ -120,14 +120,26 @@ def validate_with_fallback_patterns(text, enabled_validators):
     # PII Detection fallback patterns
     if "PII Detection" in enabled_validators:
         pii_patterns = [
-            (r'\b[A-Z][a-z]+ [A-Z][a-z]+\b', "Personal name detected"),  # Simple name pattern
-            (r'\b\d{1,5}\s+[A-Za-z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|terrace|way|place|pl)\b', "Street address detected"),  # Address pattern
+            (r'\b[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?\b', "Personal name detected"),  # More specific name pattern (3+ chars each)
+            (r'\b\d{1,5}\s+[A-Za-z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|terrace|way|place|pl|boulevard|blvd)\b', "Street address detected"),  # Address pattern
             (r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', "Email address detected"),  # Email pattern
-            (r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', "Phone number detected"),  # Phone pattern
+            (r'\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b', "Phone number detected"),  # Phone pattern
         ]
+        
+        # Skip common greeting words that aren't names
+        common_greetings = ["hello world", "good morning", "good afternoon", "good evening", "thank you"]
+        text_lower = text.lower()
+        
+        # Don't flag common greetings as names
+        is_common_greeting = any(greeting in text_lower for greeting in common_greetings)
         
         for pattern, message in pii_patterns:
             if re.search(pattern, text, re.IGNORECASE):
+                # Additional check for name pattern to avoid false positives
+                if "Personal name detected" in message and is_common_greeting:
+                    print(f"[Fallback] Skipping name detection for common greeting")
+                    continue
+                    
                 print(f"[Fallback] PII pattern matched: {message}")
                 violations.append({
                     "type": "PII Detection",
